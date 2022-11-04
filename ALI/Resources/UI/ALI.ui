@@ -12,8 +12,8 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="ctkCollapsibleButton" name="inputsCollapsibleButton">
-     <property name="text">
+    <widget class="ctkCollapsibleButton" name="inputsCollapsibleButton" native="true">
+     <property name="text" stdset="0">
       <string>Inputs</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -95,6 +95,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QLabel" name="label">
+              <property name="text">
+               <string>Model Orientation</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
           <item>
@@ -118,6 +125,11 @@
               <item>
                <property name="text">
                 <string>IOS - Work on Intra Oral Scans</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>IOS - Oriented Intra Oral Scans</string>
                </property>
               </item>
              </widget>
@@ -153,11 +165,11 @@
              </widget>
             </item>
             <item>
-             <widget class="qMRMLNodeComboBox" name="MRMLNodeComboBox">
+             <widget class="qMRMLNodeComboBox" name="MRMLNodeComboBox" native="true">
               <property name="enabled">
                <bool>true</bool>
               </property>
-              <property name="nodeTypes">
+              <property name="nodeTypes" stdset="0">
                <stringlist>
                 <string>vtkMRMLVolumeNode</string>
                </stringlist>
@@ -169,6 +181,9 @@
             </item>
             <item>
              <widget class="QLineEdit" name="lineEditModelPath"/>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineEditModelOrientation"/>
             </item>
            </layout>
           </item>
@@ -240,6 +255,13 @@
               </property>
              </widget>
             </item>
+            <item>
+             <widget class="QPushButton" name="SearchModelOrientation">
+              <property name="text">
+               <string>Search</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>
@@ -280,8 +302,8 @@
     </widget>
    </item>
    <item>
-    <widget class="ctkCollapsibleButton" name="optionsCollapsibleButton">
-     <property name="text">
+    <widget class="ctkCollapsibleButton" name="optionsCollapsibleButton" native="true">
+     <property name="text" stdset="0">
       <string>Options</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -306,8 +328,8 @@
     </widget>
    </item>
    <item>
-    <widget class="ctkCollapsibleButton" name="outputsCollapsibleButton">
-     <property name="text">
+    <widget class="ctkCollapsibleButton" name="outputsCollapsibleButton" native="true">
+     <property name="text" stdset="0">
       <string>Outputs</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout_9">
@@ -437,14 +459,14 @@
     </widget>
    </item>
    <item>
-    <widget class="ctkCollapsibleButton" name="advancedCollapsibleButton">
+    <widget class="ctkCollapsibleButton" name="advancedCollapsibleButton" native="true">
      <property name="enabled">
       <bool>false</bool>
      </property>
-     <property name="text">
+     <property name="text" stdset="0">
       <string>Advanced</string>
      </property>
-     <property name="collapsed">
+     <property name="collapsed" stdset="0">
       <bool>true</bool>
      </property>
      <layout class="QHBoxLayout" name="horizontalLayout">
@@ -468,8 +490,8 @@
     </widget>
    </item>
    <item>
-    <widget class="ctkCollapsibleButton" name="optionCollapsibleButton">
-     <property name="text">
+    <widget class="ctkCollapsibleButton" name="optionCollapsibleButton" native="true">
+     <property name="text" stdset="0">
       <string>Compute</string>
      </property>
      <layout class="QFormLayout" name="formLayout_1">

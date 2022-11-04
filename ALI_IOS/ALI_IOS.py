@@ -1,7 +1,7 @@
 #!/usr/bin/env python-real
 
 """
-AUTOMATIC LANDMARK IDENTIFICATION IN INTRAORAL SCANS (ALI_CBCT)
+AUTOMATIC LANDMARK IDENTIFICATION IN INTRAORAL SCANS (ALI_IOS)
 
 Authors :
 - Maxime Gillot (UoM)
@@ -567,6 +567,8 @@ def TradLabel(lst_teeth):
 
 
 
+
+
 class Agent:
     def __init__(
         self,
@@ -993,7 +995,7 @@ def main(args):
                     
                     else:
                         outputdir = out_path    
-
+                    print('landmark before write',lm_lst[0])
                     WriteJson(lm_lst,os.path.join(outputdir,f"{patient_id}_{jaw}_{models_type}_Pred.json"))
 
         print(f"""<filter-progress>{0}</filter-progress>""")

@@ -168,7 +168,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self._updatingGUIFromParameterNode = False
 
 
-    self.CBCT_as_input = True # True : CBCT image, False : surface IOS
+    self.Choice = 'CBCT' # CBCT, IOS Landmark, IOS Orientation
     self.folder_as_input = False # If use a folder as input
 
     self.MRMLNode_scan = None # MRML node of the selected scan
@@ -265,6 +265,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # Buttons
     self.ui.SearchScanFolder.connect('clicked(bool)',self.onSearchScanButton)
     self.ui.SearchModelFolder.connect('clicked(bool)',self.onSearchModelButton)
+    self.ui.SearchModelOrientation.connect('clicked(bool)',self.onSearchModelOrientationButton)
 
     self.ui.SearchSaveFolder.connect('clicked(bool)',self.onSearchSaveButton)
 
@@ -287,19 +288,27 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.lm_tab.Clear()
 
     if index == 1:
-      self.CBCT_as_input = False
+      self.Choice = "IOS Landmark"
+      self.ui.MRMLNodeComboBox.nodeTypes = ['vtkMRMLModelNode']
+      self.lm_tab.FillTab(SURFACE_LANDMARKS)
+    
+    elif index == 2 :
+      self.Choice = "IOS Orientation"
       self.ui.MRMLNodeComboBox.nodeTypes = ['vtkMRMLModelNode']
       self.lm_tab.FillTab(SURFACE_LANDMARKS)
 
     else:
-      self.CBCT_as_input = True
+      self.Choice = "CBCT"
       self.ui.MRMLNodeComboBox.nodeTypes = ['vtkMRMLVolumeNode']
       self.lm_tab.FillTab(GROUPS_LANDMARKS)
 
     self.ui.lineEditModelPath.setText("")
     self.model_folder = None
 
-    self.tooth_lm.widget.setHidden(self.CBCT_as_input)
+    if index == 1 or index ==2:
+      self.tooth_lm.widget.setHidden(False)
+    else :
+      self.tooth_lm.widget.setHidden(True)
     # print()
 
 
@@ -328,7 +337,6 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     selected = False
     self.MRMLNode_scan = slicer.mrmlScene.GetNodeByID(self.ui.MRMLNodeComboBox.currentNodeID)
     if self.MRMLNode_scan is not None:
-      print(PathFromNode(self.MRMLNode_scan))
       self.input_path = PathFromNode(self.MRMLNode_scan)
       self.scan_count = 1
 
@@ -339,14 +347,14 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     return selected
 
   def onTestDownloadButton(self):
-    if self.CBCT_as_input:
+    if self.Choice == "CBCT":
       webbrowser.open(TEST_SCAN["CBCT"])
     else:
       webbrowser.open(TEST_SCAN["IOS"])
 
 
   def onModelDownloadButton(self):
-    if self.CBCT_as_input:
+    if self.Choice == 'CBCT':
       for link in MODELS_LINK["CBCT"]:
         webbrowser.open(link)
     else:
@@ -389,11 +397,22 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     return count
 
+  def onSearchModelOrientationButton(self):
+    folder_gold = qt.QFileDialog.getExistingDirectory(self.parent, "Select a Model folder")
+    if folder_gold != '':
+      nbr_scans = self.CountFileWithExtention(folder_gold, [".json"],[])
+
+      if nbr_scans == 0 :
+          qt.QMessageBox.warning(self.parent, 'Warning', 'No models found in the selected folder\nPlease select a folder containing .json files\nYou can download the latest models with')
+
+      else :
+        self.ui.lineEditModelOrientation.setText(folder_gold)
+
 
   def onSearchScanButton(self):
     scan_folder = qt.QFileDialog.getExistingDirectory(self.parent, "Select a scan folder")
     if scan_folder != '':
-      if self.CBCT_as_input:
+      if self.Choice == 'CBCT':
         nbr_scans = self.CountFileWithExtention(scan_folder, [".nrrd", ".nrrd.gz", ".nii", ".nii.gz", ".gipl", ".gipl.gz"],[])
       else:
         nbr_scans = self.CountFileWithExtention(scan_folder, [".vtk"],[])
@@ -412,7 +431,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     if model_folder != '':
 
 
-      if self.CBCT_as_input:
+      if self.Choice == 'CBCT':
         lm_group = GetLandmarkGroup(GROUPS_LANDMARKS)
         available_lm,brain_dic = GetAvailableLm(model_folder,lm_group)
 
@@ -480,7 +499,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         qt.QMessageBox.warning(self.parent, 'Warning', 'Please select an input file')
         ready = False
 
-    if self.model_folder == None:
+    if self.model_folder == None and not self.Choice == "IOS Orientation":
       qt.QMessageBox.warning(self.parent, 'Warning', 'Please select a model folder')
       ready = False
     
@@ -504,7 +523,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     param = {}
 
-    if self.CBCT_as_input:
+    if self.Choice == 'CBCT':
 
       selected_lm_lst = self.lm_tab.GetSelected()
       self.landmark_cout = len(selected_lm_lst)
@@ -528,7 +547,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       param["temp_fold"] = temp_dir
     
-    else:
+    elif self.Choice == 'IOS Landmark':
       selected_lm_lst = self.lm_tab.GetSelected()
       selected_tooth_lst = self.tooth_lm.GetSelected()
 
@@ -553,6 +572,13 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       param["output_dir"] = outPath
 
 
+    elif self.Choice == 'IOS Orientation':
+      param["folder_gold"] = self.ui.lineEditModelOrientation.text
+      param["input"] = self.ui.lineEditScanPath.text
+
+      
+
+
 
 
     print(param)
@@ -561,7 +587,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
 
     self.logic = ALILogic()
-    self.logic.process(param, self.CBCT_as_input)
+    self.logic.process(param, self.Choice)
 
     self.processObserver = self.logic.cliNode.AddObserver('ModifiedEvent',self.onProcessUpdate)
     self.onProcessStarted()
@@ -573,7 +599,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.PredScanProgressBar.setValue(0)
     self.ui.PredSegProgressBar.setValue(0)
 
-    if self.CBCT_as_input:
+    if self.Choice == 'CBCT':
       self.ui.PredScanLabel.setText(f"Scan ready: 0 / {self.scan_count}")
 
       self.total_seg_progress = self.scan_count * self.landmark_cout
@@ -581,7 +607,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       self.ui.PredSegProgressBar.setMaximum(self.total_seg_progress)
       self.ui.PredSegLabel.setText(f"Landmarks found : 0 / {self.total_seg_progress}") 
 
-    else:
+    elif self.Choice == 'IOS Landmark':
       self.ui.PredScanLabel.setText(f"Scan : 0 / {self.scan_count}")
 
       model_used = []
@@ -590,12 +616,15 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
           if lm in SURFACE_LANDMARKS[model]:
             if model not in model_used:
               model_used.append(model)
+              
 
 
       self.total_seg_progress = len(self.tooth_lm.GetSelected()) * len(model_used)
 
       self.ui.PredSegProgressBar.setMaximum(self.total_seg_progress)
       self.ui.PredSegLabel.setText(f"Identified : 0 / {self.total_seg_progress}") 
+
+
 
     self.prediction_step = 0
     self.progress = 0
@@ -608,7 +637,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
   def UpdateALICBCT(self,progress):
 
-    # print(progress)
+
 
     if progress == 200:
       self.prediction_step += 1
@@ -663,14 +692,27 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
 
 
+  def UpdaterASOIOS(self,progress):
+    print('call upadater ASOIOS')
+
+    self.prediction_step+=1
+    self.ui.PredScanProgressBar.setValue(self.prediction_step)
+    self.ui.PredScanLabel.setText(f"Scan : {self.prediction_step} / {self.scan_count}")
+
+
   def UpdateProgressBar(self,progress):
+    print('call Update ProgressBar')
+
 
     # print("UpdateProgressBar")
 
-    if self.CBCT_as_input:
+    if self.Choice == 'CBCT':
       self.UpdateALICBCT(progress)
-    else:
+    elif self.Choice == 'IOS Landmark':
       self.UpdateALIIOS(progress)
+
+    elif self.Choice == 'IOS Orientation':
+      self.UpdaterASOIOS(progress)
 
 
 
@@ -680,7 +722,6 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self.ui.TimerLabel.setText(timer)
     progress = caller.GetProgress()
 
-    # print(progress)
     if progress == 0:
       self.updateProgessBar = False
 
@@ -720,7 +761,6 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
       
       print('PROCESS DONE.')
       self.RunningUI(False)
-      print(self.logic.cliNode.GetOutputText())
 
 
 
@@ -885,26 +925,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     self._parameterNode.EndModify(wasModified)
 
 
-  def onApplyButton(self):
-    """
-    Run processing when user clicks "Apply" button.
-    """
-    try:
 
-      # Compute output
-      self.logic.process(self.ui.inputSelector.currentNode(), self.ui.outputSelector.currentNode(),
-        self.ui.imageThresholdSliderWidget.value, self.ui.invertOutputCheckBox.checked)
-
-      # Compute inverted output (if needed)
-      if self.ui.invertedOutputSelector.currentNode():
-        # If additional output volume is selected then result with inverted threshold is written there
-        self.logic.process(self.ui.inputSelector.currentNode(), self.ui.invertedOutputSelector.currentNode(),
-          self.ui.imageThresholdSliderWidget.value, not self.ui.invertOutputCheckBox.checked, showResult=False)
-
-    except Exception as e:
-      slicer.util.errorDisplay("Failed to compute results: "+str(e))
-      import traceback
-      traceback.print_exc()
 
 class LMTab:
     def __init__(self) -> None:
@@ -1133,7 +1154,7 @@ class ALILogic(ScriptedLoadableModuleLogic):
     self.cliNode = None
 
 
-  def process(self, parameters, ALI_CBCT = True):
+  def process(self, parameters, Choice):
     """
     Run the processing algorithm.
     Can be used without GUI widget.
@@ -1143,21 +1164,36 @@ class ALILogic(ScriptedLoadableModuleLogic):
 
     # import time
     # startTime = time.time()
+
     logging.info('Processing started')
 
 
-    if ALI_CBCT:
+
+    if Choice == 'CBCT':
       PredictProcess = slicer.modules.ali_cbct
-    else:
+
+    elif Choice == "IOS Landmark":
+
+
       PredictProcess = slicer.modules.ali_ios
+
+
+    elif Choice == 'IOS Orientation':
+
+      PredictProcess = slicer.modules.aso_ios
+
+
 
 
 
     self.cliNode = slicer.cli.run(PredictProcess, None, parameters)
 
-    # slicer.mrmlScene.RemoveNode(self.cliNode)
 
     return PredictProcess
+
+    # slicer.mrmlScene.RemoveNode(self.cliNode)
+
+    # return PredictProcess
 
     # We don't need the CLI module node anymore, remove it to not clutter the scene with it
 
