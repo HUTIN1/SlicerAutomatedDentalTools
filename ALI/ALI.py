@@ -23,16 +23,15 @@ def PathFromNode(node):
 
 TEST_SCAN = {
   "CBCT": 'https://github.com/Maxlo24/AMASSS_CBCT/releases/download/v1.0.1/MG_test_scan.nii.gz',
-  "IOS" : 'https://github.com/baptistebaquero/ALIDDM/releases/tag/v1.0.4',
+  "IOS Landmark" : 'https://github.com/baptistebaquero/ALIDDM/releases/tag/v1.0.4',
 }
 
 MODELS_LINK = {
-  "CBCT": [
-    'https://github.com/Maxlo24/ALI_CBCT/releases/tag/v0.1-models',
-  ],
-  "IOS" : [
-    'https://github.com/baptistebaquero/ALIDDM/releases/tag/v1.0.3',
-  ],
+  "CBCT": 'https://github.com/Maxlo24/ALI_CBCT/releases/tag/v0.1-models',
+
+  "IOS Landmark" : 'https://github.com/baptistebaquero/ALIDDM/releases/tag/v1.0.3',
+
+  "IOS Orientation" : 'https://github.com/HUTIN1/SlicerAutomatedDentalTools/releases/download/untagged-a16b2657fd8938d33138/GOLD_file.zip'
 }
 
 
@@ -265,7 +264,6 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     # Buttons
     self.ui.SearchScanFolder.connect('clicked(bool)',self.onSearchScanButton)
     self.ui.SearchModelFolder.connect('clicked(bool)',self.onSearchModelButton)
-    self.ui.SearchModelOrientation.connect('clicked(bool)',self.onSearchModelOrientationButton)
 
     self.ui.SearchSaveFolder.connect('clicked(bool)',self.onSearchSaveButton)
 
@@ -294,8 +292,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
     
     elif index == 2 :
       self.Choice = "IOS Orientation"
-      self.ui.MRMLNodeComboBox.nodeTypes = ['vtkMRMLModelNode']
-      self.lm_tab.FillTab(SURFACE_LANDMARKS)
+      self.lm_tab.FillTab({})
 
     else:
       self.Choice = "CBCT"
@@ -349,17 +346,19 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
   def onTestDownloadButton(self):
     if self.Choice == "CBCT":
       webbrowser.open(TEST_SCAN["CBCT"])
-    else:
-      webbrowser.open(TEST_SCAN["IOS"])
+    elif self.Choice == "IOS Landmark":
+      webbrowser.open(TEST_SCAN["IOS Landmark"])
 
 
   def onModelDownloadButton(self):
     if self.Choice == 'CBCT':
-      for link in MODELS_LINK["CBCT"]:
-        webbrowser.open(link)
-    else:
-      for link in MODELS_LINK["IOS"]:
-        webbrowser.open(link)
+
+        webbrowser.open(MODELS_LINK["CBCT"])
+    elif self.Choice == 'IOS Landmark':
+        webbrowser.open(MODELS_LINK["IOS Landmark"])
+
+    elif self.Choice == 'IOS Orientation':
+      webbrowser.open(MODELS_LINK["IOS Orientation"])
 
 
 
@@ -397,16 +396,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     return count
 
-  def onSearchModelOrientationButton(self):
-    folder_gold = qt.QFileDialog.getExistingDirectory(self.parent, "Select a Model folder")
-    if folder_gold != '':
-      nbr_scans = self.CountFileWithExtention(folder_gold, [".json"],[])
 
-      if nbr_scans == 0 :
-          qt.QMessageBox.warning(self.parent, 'Warning', 'No models found in the selected folder\nPlease select a folder containing .json files\nYou can download the latest models with')
-
-      else :
-        self.ui.lineEditModelOrientation.setText(folder_gold)
 
 
   def onSearchScanButton(self):
@@ -446,7 +436,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
           self.lm_tab.FillTab(available_lm, enable = True)
           # print(available_lm)
           # print(brain_dic)
-      else:
+      elif self.Choice == 'IOS Landmark':
         available_lm = self.GetAvailableSurfLm(model_folder)
 
         if len(available_lm.keys()) == 0:
@@ -458,6 +448,16 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
           self.available_landmarks = available_lm.keys()
           self.lm_tab.Clear()
           self.lm_tab.FillTab(available_lm, enable = True)
+
+      elif self.Choice == "IOS Orientation":
+        if len(glob.glob(os.path.join(model_folder,'*json'))) != 2:
+          qt.QMessageBox.warning(self.parent, 'Warning', 'No landmarks models found in the selected folder\nPlease select a folder containing .json files\nYou can download the latest models with\n  "Download latest models" button')
+          return
+        else :
+          self.model_folder = model_folder
+          self.ui.lineEditModelPath.setText(self.model_folder)
+          self.lm_tab.Clear()
+
 
 
 
@@ -499,7 +499,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
         qt.QMessageBox.warning(self.parent, 'Warning', 'Please select an input file')
         ready = False
 
-    if self.model_folder == None and not self.Choice == "IOS Orientation":
+    if self.model_folder == None :
       qt.QMessageBox.warning(self.parent, 'Warning', 'Please select a model folder')
       ready = False
     
@@ -573,7 +573,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
 
     elif self.Choice == 'IOS Orientation':
-      param["folder_gold"] = self.ui.lineEditModelOrientation.text
+      param["folder_gold"] = self.model_folder
       param["input"] = self.ui.lineEditScanPath.text
 
       
@@ -616,6 +616,8 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
           if lm in SURFACE_LANDMARKS[model]:
             if model not in model_used:
               model_used.append(model)
+
+              
               
 
 
@@ -623,6 +625,15 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
       self.ui.PredSegProgressBar.setMaximum(self.total_seg_progress)
       self.ui.PredSegLabel.setText(f"Identified : 0 / {self.total_seg_progress}") 
+
+
+
+
+    elif self.Choice == 'IOS Orientation':
+      self.ui.PredScanLabel.setText(f"Scan : 0 / {self.scan_count}")
+
+
+
 
 
 
@@ -693,7 +704,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
 
   def UpdaterASOIOS(self,progress):
-    print('call upadater ASOIOS')
+
 
     self.prediction_step+=1
     self.ui.PredScanProgressBar.setValue(self.prediction_step)
@@ -701,7 +712,7 @@ class ALIWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
 
   def UpdateProgressBar(self,progress):
-    print('call Update ProgressBar')
+
 
 
     # print("UpdateProgressBar")

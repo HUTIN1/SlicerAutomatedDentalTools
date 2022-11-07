@@ -95,13 +95,6 @@
               </property>
              </widget>
             </item>
-            <item>
-             <widget class="QLabel" name="label">
-              <property name="text">
-               <string>Model Orientation</string>
-              </property>
-             </widget>
-            </item>
            </layout>
           </item>
           <item>
@@ -182,9 +175,6 @@
             <item>
              <widget class="QLineEdit" name="lineEditModelPath"/>
             </item>
-            <item>
-             <widget class="QLineEdit" name="lineEditModelOrientation"/>
-            </item>
            </layout>
           </item>
           <item>
@@ -250,13 +240,6 @@
             </item>
             <item>
              <widget class="QPushButton" name="SearchModelFolder">
-              <property name="text">
-               <string>Search</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="SearchModelOrientation">
               <property name="text">
                <string>Search</string>
               </property>

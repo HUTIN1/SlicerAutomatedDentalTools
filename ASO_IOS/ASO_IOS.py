@@ -426,22 +426,16 @@ def TransformVTKSurf(matrix,surf,deepcopy=False):
     points = vtk_to_numpy(vtkpoint.GetData())
  
     # points = points+matrix[:3,3]
-    a = np.zeros((points.shape[0],points.shape[1]+1))
-    a[:,-1] = 1
-    a = a[:,-1]
-    
-    a  = np.expand_dims(a,1)
+    a = np.ones((points.shape[0],1))
 
-    points = np.insert(points,[3],a,axis=1)
+    
+    # a  = np.expand_dims(a,1)
+    points = np.hstack((points,a))
 
     matrix = matrix[:3,:]
 
-    
-
     points = np.transpose(points)
-
     points = np.matmul(matrix ,points)
-
     points = np.transpose(points)
 
     # points = points+matrix[:3,3]
@@ -501,14 +495,14 @@ def UpperOrLower(path_filename):
 
 
 def PatientNumber(filename):
-    number = ['1','2','3','4','5','6','7','8','9']
+    number = ['1','2','3','4','5','6','7','8','9','0']
     for i in range(len(filename)):
         if filename[i] in number:
             for y in range(i,len(filename)):
                 if not filename[y] in number:
                     return int(filename[i:y])
 
-def LoadJsonLandmarks(ldmk_path):
+def LoadJsonLandmarks(ldmk_path,orientation=True):
     """
     Load landmarks from json file
     
@@ -516,11 +510,7 @@ def LoadJsonLandmarks(ldmk_path):
     ----------
     img : sitk.Image
         Image to which the landmarks belong
-    ldmk_path : str
-        Path to the json file
-    gold : bool, optional
-        If True, load gold standard landmarks, by default False
-    
+ 
     Returns
     -------
     dict
@@ -531,6 +521,10 @@ def LoadJsonLandmarks(ldmk_path):
     ValueError
         If the json file is not valid
     """
+    Upper = ['UR6O','UR1O','UL1O','UL6O']
+    Lower = [ 'LR6O','LR1O','LL1O','LL6O']
+    dic ={'Upper':Upper,'Lower':Lower}
+    jaw = UpperOrLower(os.path.basename(ldmk_path))
     with open(ldmk_path) as f:
         data = json.load(f)
     
@@ -542,8 +536,13 @@ def LoadJsonLandmarks(ldmk_path):
         #lm_coord = ((lm_ph_coord - origin) / spacing).astype(np.float16)
         lm_coord = lm_ph_coord.astype(np.float64)
         landmarks[markup["label"]] = lm_coord
-    return landmarks
 
+    if orientation:
+        out={}
+        for lm in dic[jaw]:
+            out[lm] = landmarks[lm]
+        landmarks = out
+    return landmarks
 
 def manageICP(input_json,gold_json):
     source = LoadJsonLandmarks(input_json)
@@ -590,6 +589,18 @@ def WriteJsonLandmarks(landmarks,output_file,input_file_json):
     with open(output_file, 'w') as outfile:
         json.dump(tempData, outfile, indent=4)
 
+
+def search(path,type):
+    out=[]
+    a = glob.glob(path+'/*'+type)
+    for p in a: 
+        if os.path.isfile(p):
+            out.append(p)
+        else:
+            out+= search(p,type)
+    return out
+
+
 def main(args):
 
 
@@ -604,8 +615,8 @@ def main(args):
 
 
 
-    json_files = glob.glob(args['input']+'/*json')
-    vtk_files = glob.glob(args['input']+'/*vtk')
+    json_files = search(args['input'],'json')
+    vtk_files = search(args['input'],'vtk')
     list_file=[]
     iter = 0 
     for json_file in json_files :
@@ -615,7 +626,6 @@ def main(args):
         json_id = PatientNumber(json_name)
         for vtk_file in vtk_files:
             iter+=1
-            print('iter',iter)
             vtk_name = os.path.basename(vtk_file)
             vtk_id = PatientNumber(vtk_name)
             vtk_jaw = UpperOrLower(vtk_file)
@@ -625,28 +635,39 @@ def main(args):
                 vtk_files.remove(vtk_file)
 
 
-                sys.stdout.flush()
 
+
+                sys.stdout.flush()
 
 
     print('start icp')
     iter = 0
     for file in list_file:
         iter+=1
-        print('iter',iter)
+        print(iter,file)
         jaw = UpperOrLower(file['json'])
-        matrix = manageICP(file['json'],dic_gold[jaw])
-        landmark = LoadJsonLandmarks(file['json'])
+        try :
+            matrix = manageICP(file['json'],dic_gold[jaw])
+        except KeyError:
+            continue
+        landmark = LoadJsonLandmarks(file['json'],orientation=False)
         landmark = ApplyTransform(landmark,matrix)
 
         surf_input = ReadSurf(file['vtk'])
-        surf_output = TransformVTKSurf(matrix,surf_input,deepcopy=True)
+        surf_output = TransformVTKSurf(matrix,surf_input)
 
         WriteJsonLandmarks(landmark, file['json'],dic_gold[jaw])
         WriteSurf(surf_output,file['vtk'])
 
+        print(f"""<filter-progress>{0}</filter-progress>""")
         sys.stdout.flush()
-
+        time.sleep(0.5)
+        print(f"""<filter-progress>{2}</filter-progress>""")
+        sys.stdout.flush()
+        time.sleep(0.5)
+        print(f"""<filter-progress>{0}</filter-progress>""")
+        sys.stdout.flush()
+        time.sleep(0.5)
 
 
 
@@ -661,18 +682,18 @@ if __name__ == "__main__":
     print(sys.argv)
 
 
-    # args = {
-    #     "input": sys.argv[1],
-    #     "folder_gold" : sys.argv[2]
-
-    # }
-
-
     args = {
-        "input": '/home/luciacev/Desktop/Data/ASO_IOS/segmented_landmark',
-        "folder_gold" : '/home/luciacev/Desktop/Data/ASO_IOS/GOLD_file'
+        "input": sys.argv[1],
+        "folder_gold" : sys.argv[2]
 
     }
+
+
+    # args = {
+    #     "input": '/home/luciacev/Desktop/Data/ASO_IOS/segmented_landmark',
+    #     "folder_gold" : '/home/luciacev/Desktop/Data/ASO_IOS/GOLD_file'
+
+    # }
 
     
     # args = {
